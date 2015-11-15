@@ -37,12 +37,12 @@ public class ArbitraryLengthBitVector {
       long block = blocks[sblock];
 
       long mask = size >=64 ? MASK:~(MASK << size);
-      return (block >> shift) & mask;
+      return (block >>> shift) & mask;
     }
 
     int lowbitsize = 64 - shift;
 
-    long lowbits = (blocks[sblock] >> shift) & ~(MASK << lowbitsize);
+    long lowbits = (blocks[sblock] >>> shift) & ~(MASK << lowbitsize);
     long highbitmask = size >=64 ? MASK:~(MASK << size);
     long highbits = (blocks[endblock] << lowbitsize) & highbitmask;
 

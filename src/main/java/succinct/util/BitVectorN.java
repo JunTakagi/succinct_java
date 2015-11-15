@@ -16,6 +16,10 @@ public class BitVectorN {
     mask=(1L<<wordsize)-1L;
   }
 
+  public void copy(BitVector64 origin) {
+    this.vector = Arrays.copyOf(origin.blocks, origin.blocks.length);
+  }
+
   public void construct(int blocknum) {
     long bitLength = (long)(blocknum) * (long)(wordsize);
     int blockNum = (int)((bitLength-1L) / 64L) + 1;
@@ -35,12 +39,12 @@ public class BitVectorN {
     if (sblock == endblock) {
       long bits = vector[sblock];
 
-      return (bits >> shift) & mask;
+      return (bits >>> shift) & mask;
     }
 
     int lowbitsize = 64 - shift;
 
-    long lowbits = (vector[sblock] >> shift) & ~(LONGMASK << lowbitsize);
+    long lowbits = (vector[sblock] >>> shift) & ~(LONGMASK << lowbitsize);
     long highbits = (vector[endblock] << lowbitsize) & mask;
 
     return highbits | lowbits;
@@ -61,7 +65,7 @@ public class BitVectorN {
     } else {
       vector[sblock] |= add << shift;
 
-      long highbits = add >> (64 - shift);
+      long highbits = add >>> (64 - shift);
 
       vector[endblock] |= highbits;
     }

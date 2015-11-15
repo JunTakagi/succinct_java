@@ -10,7 +10,6 @@ public class GMMNSequencial implements SuccinctBitVector {
   public static final String CONF_SUPERBLOCK_STEP = "succinct.gmmn.superblock.steps";
   public static final double LOG2 = Math.log(2.0);
 
-  protected int[] superBlockRank;
   protected int superBlockStep;
   protected int superBlockNum;
   protected ConstBlockBitVector superBlockRanks;
