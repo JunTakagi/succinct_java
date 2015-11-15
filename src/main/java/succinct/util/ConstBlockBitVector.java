@@ -5,6 +5,7 @@ package succinct.util;
  */
 public interface ConstBlockBitVector {
   public void construct(long bitLength);
+  public void constructAsIndex(int blocksize);
   public long access(int numBlock);
   public int select(int blockPos, int num);
   public int popcount(int numBlock);
@@ -12,4 +13,5 @@ public interface ConstBlockBitVector {
   public void set(int pos, int i);
   public void setBlock(int block, long bits);
   public int getBlockNum();
+  public int getBlockSize();
 }

@@ -15,6 +15,12 @@ public class BitVector64 implements ConstBlockBitVector {
     blocks = new long[blockNum];
     Arrays.fill(blocks, 0L);
   }
+  @Override
+  public void constructAsIndex(int blocksize) {
+    blockNum = blocksize;
+    blocks = new long[blockNum];
+    Arrays.fill(blocks, 0L);
+  }
 
   @Override
   public long access(int numBlock) {
@@ -80,4 +86,6 @@ public class BitVector64 implements ConstBlockBitVector {
 
   @Override
   public int getBlockNum() { return blockNum; }
+  @Override
+  public int getBlockSize() { return BLOCK_SIZE; }
 }
