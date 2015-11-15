@@ -72,15 +72,10 @@ public class GMMNSequencial implements SuccinctBitVector {
     long prevrank = superBlockRanks.access(superblock);
     long totalrank = prevrank;
 
-    System.out.println("superblock " + superblock +
-                       " blockStart " + blockStart +
-                       " blockEnd " + blockEnd);
     for (int i=blockStart; i<blockEnd; i++) {
       totalrank += blocks.popcount(i);
-      System.out.println("i= " + i + " totalrank=" + totalrank);
       if (totalrank >= num) {
         long innerBlockPos = blocks.select(i, (int)(num-prevrank));
-        System.out.println("i => " + (((long)i) * blocks.getBlockSize())+ " inner=" + innerBlockPos);
         return ((long)i) * blocks.getBlockSize() + innerBlockPos;
       }
       prevrank = totalrank;
