@@ -79,7 +79,7 @@ public class GMMNSequencial implements SuccinctBitVector {
       }
       prevrank = totalrank;
     }
-    return -1L;
+    return -1L; // ここへ来ることは本来ない
   }
 
   protected long binarySearch(long num, int start, int end) {
