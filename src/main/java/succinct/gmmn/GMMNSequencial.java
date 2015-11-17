@@ -2,6 +2,8 @@ package succinct.gmmn;
 
 import java.util.Map;
 
+import java.lang.StringBuilder;
+
 import succinct.SuccinctBitVector;
 import succinct.util.ConstBlockBitVector;
 import succinct.util.BitBlockFactory;
@@ -90,5 +92,20 @@ public class GMMNSequencial implements SuccinctBitVector {
       return binarySearch(num, start, middle);
     }
     return binarySearch(num, middle, end);
+  }
+
+  @Override
+  public long size() {
+    long ret = 0L;
+    ret += superBlockRanks.size();
+    ret += blocks.size();
+    return ret;
+  }
+  @Override
+  public String sizeInfo() {
+    StringBuilder info = new StringBuilder();
+    info.append("original block regeion:\t").append(String.valueOf(blocks.size()));
+    info.append("\nsuperblock rank regeion:\t").append(String.valueOf(superBlockRanks.size()));
+    return info.toString();
   }
 }

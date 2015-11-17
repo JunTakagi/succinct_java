@@ -8,4 +8,6 @@ public interface SuccinctBitVector {
   public long rank(long i);
 
   public void build(ConstBlockBitVector bv, Map config);
+  public long size();
+  public String sizeInfo();
 }

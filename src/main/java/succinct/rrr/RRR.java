@@ -3,6 +3,8 @@ package succinct.rrr;
 import java.util.Map;
 import java.util.Arrays;
 
+import java.lang.StringBuilder;
+
 import org.apache.commons.math3.util.CombinatoricsUtils;
 import org.apache.commons.math3.fraction.BigFraction;
 
@@ -309,5 +311,25 @@ public class RRR implements SuccinctBitVector {
     r = (r & 0x0000ffff0000ffffL) + ((r & 0xffff0000ffff0000L) >>> 16);
     r = (r & 0x00000000ffffffffL) + ((r & 0xffffffff00000000L) >>> 32);
     return (int) r;
+  }
+  @Override
+  public long size() {
+    long ret = 0L;
+    ret += superBlockRanks.size();
+    ret += ks.size();
+    ret += rs.size();
+    ret += rLength.size();
+    ret += 32L *  (long)rLengthSampling.length;
+    return ret;
+  }
+  @Override
+  public String sizeInfo() {
+    StringBuilder info = new StringBuilder("");
+    info.append("super block rank regeion").append(String.valueOf(superBlockRanks.size()));
+    info.append("\nblock class regeion").append(String.valueOf(ks.size()));
+    info.append("\nblock r index regeion").append(String.valueOf(rs.size()));
+    info.append("\nr index length regeion").append(String.valueOf(rLength.size()));
+    info.append("\nr length partial sum regeion").append(String.valueOf(32L *  (long)rLengthSampling.length));
+    return info.toString();
   }
 }
