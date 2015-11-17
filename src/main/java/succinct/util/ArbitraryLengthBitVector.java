@@ -58,6 +58,8 @@ public class ArbitraryLengthBitVector {
     }
   }
 
+  public long size() { return 64L * (long)blocks.length; }
+
   public void dump() {
     for (int i=0; i<blocks.length; i++) {
       System.out.println(Long.toHexString(blocks[i]));

@@ -17,7 +17,7 @@ public class BitVectorN {
   }
 
   public void copy(BitVector64 origin) {
-    this.vector = Arrays.copyOf(origin.blocks, origin.blocks.length);
+    this.vector = Arrays.copyOf(origin.blocks, origin.blocks.length+1); // extra 1 block is needed for padding of last block
   }
 
   public void construct(int blocknum) {
@@ -71,6 +71,8 @@ public class BitVectorN {
     }
     cursor++;
   }
+
+  public long size() { return 64L * (long)vector.length; }
 
   public void dump() {
     for (int i=0; i<vector.length; i++) {

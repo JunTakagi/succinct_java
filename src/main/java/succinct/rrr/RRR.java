@@ -69,6 +69,7 @@ public class RRR implements SuccinctBitVector {
     // prepare R size
     int rMaxSize = (int)Math.ceil(Math.log(CombinatoricsUtils.binomialCoefficient(blockSize, blockSize/2)) / LOG2);
     rLength = new BitVectorN(rMaxSize);
+    rLength.construct(blockNum);
 
     if (config.containsKey(CONF_R_SAMPLE_STEP)) {
       rSampleStep = ((Number)(config.get(CONF_R_SAMPLE_STEP))).intValue();
@@ -208,11 +209,11 @@ public class RRR implements SuccinctBitVector {
     int rSampleBlock = pos / rSampleStep;
     int rStartPos = rLengthSampling[rSampleBlock];
 
-    for (int i=rSampleBlock*rSampleStep; i<rSampleBlock; i++) {
+    for (int i=rSampleBlock*rSampleStep; i<pos; i++) {
       rStartPos += (int)rLength.access(i);
     }
 
-    int rEndPos = rStartPos + (int)rLength.access(rSampleBlock);
+    int rEndPos = rStartPos + (int)rLength.access(pos);
     if (rStartPos == rEndPos) return 0;
     long r = rs.access(rStartPos, rEndPos-1);
     return r;
@@ -244,7 +245,7 @@ public class RRR implements SuccinctBitVector {
       blockContents = decodeR(blockSize, klass, r);
     }
 
-    blockContents &= ~(LONGMASK << (blockPos+1));
+    blockContents &= ~(LONGMASK << (innerBlockPos+1));
 
     ret += popcount(blockContents);
 

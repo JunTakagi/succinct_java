@@ -23,6 +23,17 @@ public class BitVector64 implements ConstBlockBitVector {
   }
 
   @Override
+  public void copy(ConstBlockBitVector bv) {
+    BitVector64 bv64 = (BitVector64) bv;
+    blocks = Arrays.copyOf(bv64.blocks, bv64.blockNum);
+    blockNum = bv64.blockNum;
+  }
+  @Override
+  public void copy(ArbitraryLengthBitVector bv) {
+    blocks = Arrays.copyOf(bv.blocks, bv.blocks.length);
+    blockNum = bv.blocks.length;
+  }
+  @Override
   public long access(int numBlock) {
     return blocks[numBlock];
   }
@@ -88,4 +99,6 @@ public class BitVector64 implements ConstBlockBitVector {
   public int getBlockNum() { return blockNum; }
   @Override
   public int getBlockSize() { return BLOCK_SIZE; }
+  @Override
+  public long size() { return (long)blockNum * (long)BLOCK_SIZE; }
 }

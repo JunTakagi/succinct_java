@@ -7,6 +7,8 @@ public interface ConstBlockBitVector {
   public void construct(long bitLength);
   public void constructAsIndex(int blocksize);
   public long access(int numBlock);
+  public void copy(ConstBlockBitVector bv);
+  public void copy(ArbitraryLengthBitVector bv);
   public int select(int blockPos, int num);
   public int popcount(int numBlock);
   public int popcount(int numBlock, int pos);
@@ -14,4 +16,5 @@ public interface ConstBlockBitVector {
   public void setBlock(int block, long bits);
   public int getBlockNum();
   public int getBlockSize();
+  public long size();
 }
