@@ -9,11 +9,20 @@ import static org.testng.Assert.*;
 import succinct.util.*;
 
 public class RCalculationTest {
-  private RRR bv;
+  private RRR rrr;
   private Map conf;
+  private BitVector64 dummy;
 
   @BeforeMethod
   public void prepare() {
+    conf = new HashMap();
+    dummy = new BitVector64();
+    dummy.construct(64L * 32L);
+    rrr = new RRR();
+  }
+  @AfterMethod
+  public void clean() {
+    conf.clear();
   }
 
   /**
@@ -22,24 +31,37 @@ public class RCalculationTest {
   @Test
   public void testRCalculation() {
     int blocksize = 4;
+    conf.put(RRR.CONF_BLOCK_SIZE, new Integer(blocksize));
+    rrr.build(dummy, conf);
+
     long maxval = 1L << blocksize -1L;
     for (long i=0; i<maxval; i++) {
-      int klass = RRR.popcount(i);
-      long r = RRR.calcR(blocksize, klass, i);
-      long block = RRR.decodeR(blocksize, klass, r);
+      int klass = rrr.popcount(i);
+      long r = rrr.calcR(klass, i);
+      long block = rrr.decodeR(klass, r);
 
       assertEquals(i, block);
 
-      int rLength = RRR.calcRLength(blocksize, klass);
+      int rLength = rrr.getRLength(klass);
       long maxRValue = (1L << rLength) -1L;
 
       assertTrue(r <= maxRValue);
     }
+  }
 
-    blocksize = 63;
-    long block = 0x7331cc5599aae8b2L;
-    long r = RRR.calcR(blocksize, 32, block);
-    long decoded = RRR.decodeR(blocksize, 32, r);
+  /**
+   * rの計算途中が最大になる値で桁溢れが生じないことを確認
+   */
+  @Test
+  public void testMaxRCalculate() {
+    int blocksize = 62;
+    conf.put(RRR.CONF_BLOCK_SIZE, new Integer(blocksize));
+    rrr.build(dummy, conf);
+
+    int klass = 31;
+    long block = 0x3fffffff80000000L;
+    long r = rrr.calcR(klass, block);
+    long decoded = rrr.decodeR(klass, r);
     assertEquals(decoded, block);
   }
 }

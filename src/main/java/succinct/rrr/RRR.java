@@ -4,9 +4,7 @@ import java.util.Map;
 import java.util.Arrays;
 
 import java.lang.StringBuilder;
-
-import org.apache.commons.math3.util.CombinatoricsUtils;
-import org.apache.commons.math3.fraction.BigFraction;
+import java.math.BigInteger;
 
 import succinct.SuccinctBitVector;
 import succinct.util.ConstBlockBitVector;
@@ -25,7 +23,8 @@ public class RRR implements SuccinctBitVector {
   protected ConstBlockBitVector superBlockRanks;
   protected BitVectorN ks;
   protected ArbitraryLengthBitVector rs;
-  protected BitVectorN rLength;
+  protected byte[] rLengthTable;
+  protected long[] cmbTable;
   protected int[] rLengthSampling;
 
   protected int superBlockStep;
@@ -47,8 +46,9 @@ public class RRR implements SuccinctBitVector {
     }
     if (config.containsKey(CONF_BLOCK_SIZE)) {
       blockSize = ((Number)(config.get(CONF_BLOCK_SIZE))).intValue(); // 7, 15, 31, 63
+      if (blockSize > 62) blockSize = 62;
     } else {
-      blockSize = 63;
+      blockSize = 62;
     }
 
     BitVectorN workingVector = new BitVectorN(blockSize);
@@ -69,10 +69,23 @@ public class RRR implements SuccinctBitVector {
     ks.construct(blockNum);
 
     // prepare R size
-    int rMaxSize = (int)Math.ceil(Math.log(CombinatoricsUtils.binomialCoefficient(blockSize, blockSize/2)) / LOG2);
-    rLength = new BitVectorN(rMaxSize);
-    rLength.construct(blockNum);
+    rLengthTable = new byte[blockSize+1];
+    BigInteger cmb4len = BigInteger.valueOf(1L);
+    rLengthTable[0] = 0;
+    for (int k=1; k<blockSize+1; k++) {
+      cmb4len = cmb4len.multiply(BigInteger.valueOf(blockSize-k+1)).divide(BigInteger.valueOf(k));
+      rLengthTable[k] = (byte) Math.ceil(Math.log(cmb4len.longValue())/LOG2);
+    }
 
+    // calc cmb(t-1,k) table
+    cmbTable = new long[blockSize];
+    long cmb = 1L;
+    for (int k=1; k<blockSize; k++) {
+      cmb = (cmb*(blockSize-k))/k;
+      cmbTable[k] = cmb;
+    }
+
+    // prepare partial sum support region
     if (config.containsKey(CONF_R_SAMPLE_STEP)) {
       rSampleStep = ((Number)(config.get(CONF_R_SAMPLE_STEP))).intValue();
     } else {
@@ -94,10 +107,9 @@ public class RRR implements SuccinctBitVector {
       }
       long block = workingVector.access(i);
       int klass = popcount(block);
-      int curRLength = calcRLength(blockSize, klass);
+      int curRLength = rLengthTable[klass];
 
       ks.setNext(klass);
-      rLength.setNext(curRLength);
 
       totalRank += klass;
       totalRLength += curRLength;
@@ -117,27 +129,27 @@ public class RRR implements SuccinctBitVector {
     if (k == blockSize) return;
     if (k == 0) return;
 
-    long r = calcR(blockSize, k, block);
+    long r = calcR(k, block);
 
-    int rLength = calcRLength(blockSize, k);
+    int rLength = rLengthTable[k];
 
     for (int i=0; i<rLength; i++) {
       rs.setNext((int)((r >>> i) & 1L));
     }
   }
 
-  static public int calcRLength(int blockSize, int k) {
-    return (int)Math.ceil(Math.log(CombinatoricsUtils.binomialCoefficient(blockSize, k)) / LOG2);
+  public byte getRLength(int k) {
+    return rLengthTable[k];
   }
 
-  static public long calcR(int blockSize, int k, long block) {
+  public long calcR(int k, long block) {
     if (k == blockSize) return 0;
     if (k == 0) return 0;
 
     long r = 0L;
     int t = blockSize;
 
-    long cmb = CombinatoricsUtils.binomialCoefficient(t-1, k);
+    long cmb = cmbTable[k];
 
     for (int i=blockSize-1; i>=0; i--) {
       int check = (int)((block >>> i) & 1L);
@@ -150,21 +162,19 @@ public class RRR implements SuccinctBitVector {
         if (k == 0) break;
 
         // next cmb
-        BigFraction multiplyer = new BigFraction(k+1, t);
-        cmb = multiplyer.multiply(cmb).longValue(); // (t'-1-1)C(k'-1). t', k' is previous t and k.
+        cmb = (cmb*(k+1))/t; // (t'-1-1)C(k'-1). t', k' is previous t and k.
       } else {
         t--;
 
         if (t == k) break;
 
-        BigFraction multiplyer = new BigFraction(t-k, t);
-        cmb = multiplyer.multiply(cmb).longValue(); // (t'-1-1)C(k). t' is previous t.
+        cmb = (cmb*(t-k))/t; // (t'-1-1)C(k). t' is previous t.
       }
     }
     return r;
   }
 
-  static public long decodeR(int blockSize, int klass, long r) {
+  public long decodeR(int klass, long r) {
     long block = 0L;
 
     if (klass == 0) return 0L;
@@ -175,7 +185,7 @@ public class RRR implements SuccinctBitVector {
     int t = blockSize;
     int k=klass;
 
-    long cmb = CombinatoricsUtils.binomialCoefficient(t-1, k);
+    long cmb = cmbTable[k];
 
     for (int i=0; i<blockSize; i++) {
       block <<= 1;
@@ -195,13 +205,11 @@ public class RRR implements SuccinctBitVector {
           break;
         }
 
-        BigFraction multiplyer = new BigFraction(k+1, t);
-        cmb = multiplyer.multiply(cmb).longValue(); // (t'-1-1)C(k'-1). t', k' is previous t and k.
+        cmb = (cmb*(k+1))/t; // (t'-1-1)C(k'-1). t', k' is previous t and k.
       } else {
         t--;
 
-        BigFraction multiplyer = new BigFraction(t-k, t);
-        cmb = multiplyer.multiply(cmb).longValue(); // (t'-1-1)C(k). t' is previous t.
+        cmb = (cmb*(t-k))/t; // (t'-1-1)C(k). t' is previous t.
       }
     }
     return block;
@@ -212,10 +220,10 @@ public class RRR implements SuccinctBitVector {
     int rStartPos = rLengthSampling[rSampleBlock];
 
     for (int i=rSampleBlock*rSampleStep; i<pos; i++) {
-      rStartPos += (int)rLength.access(i);
+      rStartPos += rLengthTable[(int)ks.access(i)];
     }
 
-    int rEndPos = rStartPos + (int)rLength.access(pos);
+    int rEndPos = rStartPos + rLengthTable[(int)ks.access(pos)];
     if (rStartPos == rEndPos) return 0;
     long r = rs.access(rStartPos, rEndPos-1);
     return r;
@@ -241,10 +249,10 @@ public class RRR implements SuccinctBitVector {
     if (klass == 0) {
       return ret;
     } else if (klass == blockPos) {
-      blockContents = decodeR(blockSize, klass, 0L);
+      blockContents = decodeR(klass, 0L);
     } else {
       long r = getR(blockPos); // ここのコスト重いのでさぼれるならさぼる
-      blockContents = decodeR(blockSize, klass, r);
+      blockContents = decodeR(klass, r);
     }
 
     blockContents &= ~(LONGMASK << (innerBlockPos+1));
@@ -269,10 +277,10 @@ public class RRR implements SuccinctBitVector {
       if (totalrank >= num) {
         long blockContents = 0L;
         if (klass == blockSize) {
-          blockContents = decodeR(blockSize, klass, 0L);
+          blockContents = decodeR(klass, 0L);
         } else {
           long r = getR(i);
-          blockContents = decodeR(blockSize, klass, r);
+          blockContents = decodeR(klass, r);
         }
 
         long innerBlockPos = sequentialSearch(blockContents, (int)(num-prevrank), blockSize);
@@ -318,18 +326,20 @@ public class RRR implements SuccinctBitVector {
     ret += superBlockRanks.size();
     ret += ks.size();
     ret += rs.size();
-    ret += rLength.size();
-    ret += 32L *  (long)rLengthSampling.length;
+    ret += 8L * rLengthTable.length;
+    ret += 32L * rLengthSampling.length;
+    ret += 64L * cmbTable.length;
     return ret;
   }
   @Override
   public String sizeInfo() {
     StringBuilder info = new StringBuilder("");
-    info.append("super block rank regeion").append(String.valueOf(superBlockRanks.size()));
-    info.append("\nblock class regeion").append(String.valueOf(ks.size()));
-    info.append("\nblock r index regeion").append(String.valueOf(rs.size()));
-    info.append("\nr index length regeion").append(String.valueOf(rLength.size()));
-    info.append("\nr length partial sum regeion").append(String.valueOf(32L *  (long)rLengthSampling.length));
+    info.append("super block rank regeion\t").append(String.valueOf(superBlockRanks.size()));
+    info.append("\nblock class regeion\t").append(String.valueOf(ks.size()));
+    info.append("\nblock r index regeion\t").append(String.valueOf(rs.size()));
+    info.append("\nr index length table regeion\t").append(String.valueOf(8L * rLengthTable.length));
+    info.append("\nr length partial sum regeion\t").append(String.valueOf(32L *  rLengthSampling.length));
+    info.append("\nr cmb table regeion\t").append(String.valueOf(64L * cmbTable.length));
     return info.toString();
   }
 }
